@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r global_options, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, comment = "", cache = TRUE)
+knitr::opts_chunk$set(comment = "", cache = TRUE)
 ```
 
 ## Introduction
@@ -42,7 +42,9 @@ train1 <- builddata[intrain,]
 test1 <- builddata[-intrain,]
 ```
 
-So, after some under the hood data cleanup we are ready to begin modeling. In terms of selecting the procedures to use the thing to consider is that what is being asked is basically classification as this exercise is essentially a much more complicated (by number of variables) version of some of the classification exercises demonstrated on simple data sets like the Iris example. To that we are going to create work with the random forest algorithm to predict our outcome as it is an effective method of classification for a large number of predictors
+## Model Development
+
+So, after some under the hood data cleanup we are ready to begin modeling. In terms of selecting the procedures to use the thing to consider is that what is being asked is basically classification as this exercise is essentially a much more complicated (by number of variables) version of some of the classification exercises demonstrated on simple data sets like the Iris example. To that we are going to create work with the random forest algorithm to predict our outcome as it is an effective method of classification for a large number of predictors. For the sake of computing efficiency we have set the random forest to perform three-fold cross validation.
 
 ```{r}
 suppressMessages(library(caret))
@@ -65,6 +67,8 @@ stopCluster(cluster)
 registerDoSEQ()
 ```
 
+## Analysis
+
 Let us take a look at the accuracy of our prediction on a validation subset that we created:
 
 ```{r}
@@ -84,7 +88,7 @@ p <- qplot(confuseVal$byClass[,1], confuseVal$byClass[,2], xlab = "Sensitivity",
 p
 ```
 
-This summarizes a bit more clearly than the table above that for each category that we are trying to predict that we have an excellent balance of sensitivity and specificity in predicting the measure.
+This summarizes a bit more clearly than the table above that for each category that we are trying to predict that we have an excellent balance of sensitivity and specificity in predicting the measure. Overall we would expect less than .3% OOB rates.
 
 Data Sourced from:
 Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
