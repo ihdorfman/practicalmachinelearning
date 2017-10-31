@@ -1,0 +1,90 @@
+---
+title: "Analysis of Body Sensors for Activity Recognition"
+author: "Isaac Dorfman"
+date: "October 31, 2017"
+output: html_document
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, comment = "", cache = TRUE)
+```
+
+## Introduction
+
+The goal of this project is to predict the specific exercise that a participant was performing based off of positional and acceleration data captured from a variety of body sensors. We have been provided with a training data set of approximately 19000 observations with which to create our model that will then be applied to a testing set of 20 observations for evaluation. This project will primarily use elements of the 'caret' package to create this model.
+
+Per recommendations from the course forums there will be some data cleaning performed prior to trying to fit any models to the training data. This will include removing variables of no consequence to prediction (time-stamps and other internal use type entries) along with removing variables that have a high percentage of missing data. Doing this should have twofold benefits. Firstly it will (hopefully) expedite processing time and secondly it will (again hopefully) reduce the chance of a modeling method picking a variable that does not actually contain that much information. For perspective, when one runs the 'complete.cases' function on the training data set provided fewer than 2% of the observations contain entries for all variables.
+
+```{r}
+
+suppressMessages(library(caret))
+
+training <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testing <- read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+
+training <- training[,-(1:7)]
+testing <- testing[,-(1:7)]
+
+nomiss <- colSums(is.na(training))/nrow(training) < .5
+training <- training[nomiss]
+testing <- testing[nomiss]
+
+zerovar <- nearZeroVar(training)
+training <- training[,-zerovar]
+testing <- testing[,-zerovar]
+
+inbuild <- createDataPartition(y=training$classe, p=.7, list = FALSE)
+validation <- training[-inbuild,]
+builddata <- training[inbuild,]
+
+intrain <- createDataPartition(y=builddata$classe, p=.7, list = FALSE)
+train1 <- builddata[intrain,]
+test1 <- builddata[-intrain,]
+```
+
+So, after some under the hood data cleanup we are ready to begin modeling. In terms of selecting the procedures to use the thing to consider is that what is being asked is basically classification as this exercise is essentially a much more complicated (by number of variables) version of some of the classification exercises demonstrated on simple data sets like the Iris example. To that we are going to create work with the random forest algorithm to predict our outcome as it is an effective method of classification for a large number of predictors
+
+```{r}
+suppressMessages(library(caret))
+suppressMessages(library(doParallel))
+
+cluster <- makeCluster(detectCores() - 3) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+
+fitControl <- trainControl(method = "cv",
+                           number = 3,
+                           allowParallel = TRUE)
+
+mod1 <- train(classe~., method = "rf", data = train1, trControl = fitControl, ntree = 500)
+
+pred1 <- predict(mod1, test1)
+
+pred1V <- predict(mod1, validation)
+
+stopCluster(cluster)
+registerDoSEQ()
+```
+
+Let us take a look at the accuracy of our prediction on a validation subset that we created:
+
+```{r}
+suppressMessages(library(caret))
+
+confuseVal <- confusionMatrix(pred1V, validation$classe)
+confuseVal
+```
+
+That looks pretty good as our model is predicted to have between 98% and 99% accuracy. Based off of the testing that was done in arriving at this model it is unlikely that we will gain significantly more accuracy from further tweaks to the existing model. We can also look at a comparison of the sensitivity and specificity for each class and see that overall the random forest procedure has balanced those considerations fairly well.
+
+```{r}
+suppressMessages(library(ggplot2))
+
+p <- qplot(confuseVal$byClass[,1], confuseVal$byClass[,2], xlab = "Sensitivity", 
+           ylab = "Specificity", main = "Comparison of Model Sensitivity against Specificity")
+p
+```
+
+This summarizes a bit more clearly than the table above that for each category that we are trying to predict that we have an excellent balance of sensitivity and specificity in predicting the measure.
+
+Data Sourced from:
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 

@@ -1,0 +1,8 @@
+base
+RevoUtilsMath
+lattice
+ggplot2
+caret
+foreach
+iterators
+doParallel
